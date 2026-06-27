@@ -22,4 +22,4 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
-}
+} 
