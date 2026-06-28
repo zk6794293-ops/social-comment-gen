@@ -18,11 +18,17 @@ Tone: casual, friendly, like Facebook/Instagram comments.
 Topic: ${topic}
 Return only the 3 comments, one per line.`
 
-      const response = await (window as any).puter.ai.chat(prompt)
-      const generated = response.split('\n').filter((c: string) => c.trim())
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt })
+      })
+      
+      const data = await response.json()
+      const generated = data.text.split('\n').filter((c: string) => c.trim())
       setComments(generated)
     } catch (err) {
-      setComments(['Error: Puter.js not loaded. Refresh page.'])
+      setComments(['Error: Server error. Try again.'])
     }
 
     setLoading(false)
