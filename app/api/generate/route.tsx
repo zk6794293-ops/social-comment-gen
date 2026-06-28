@@ -11,11 +11,12 @@ export async function POST(req: NextRequest) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: "GEMINI_API_KEY not set" }, { status: 500 });
+      return NextResponse.json({ error: "GEMINI_API_KEY not set in Vercel" }, { status: 500 });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // Upgraded: 1.5 کی جگہ 2.0 flash - Vercel پر stable
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const prompt = `Post: "${post}"
 User wants ${tone} tone comments.
@@ -30,7 +31,9 @@ Write 3 short, natural, human-like comments as if a real person is commenting.
 
     return NextResponse.json({ comments });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    console.error('Gemini Error:', error);
+    // Upgraded: اصل error browser میں بھیج دو تاکہ debug آسان ہو
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
