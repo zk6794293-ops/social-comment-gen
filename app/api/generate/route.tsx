@@ -1,37 +1,36 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const { prompt } = await req.json();
-    const key = process.env.GEMINI_API_KEY;
-
-    if (!key) {
-      return NextResponse.json({ error: "API key missing" }, { status: 500 });
+    const { post, tone } = await req.json();
+    
+    if (!post) {
+      return NextResponse.json({ error: "Post missing" }, { status: 400 });
     }
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
-        }),
-      }
-    );
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: "GEMINI_API_KEY not set" }, { status: 500 });
+    }
 
-    const data = await res.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    return NextResponse.json({ text });
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `Post: "${post}"
+User wants ${tone} tone comments.
+
+Task: Read the post, understand context + language.
+Write 3 short, natural, human-like comments as if a real person is commenting.
+1-2 lines each. Match the post language. No hashtags, no quotes. Separate each comment with ||`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    const comments = text.split("||").map(c => c.trim()).filter(Boolean).slice(0, 3);
+
+    return NextResponse.json({ comments });
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
