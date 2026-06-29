@@ -36,4 +36,4 @@ Write 3 short, natural, human-like comments as if a real person is commenting.
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
-}
+} 
