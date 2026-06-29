@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     
-    // فری کوٹا: 15 req/min - نئی API کا اسٹیبل نام
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // فری کوٹا: 15 req/min - نیا اسٹیبل ماڈل
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const prompt = `Post: "${post}"
 User wants ${tone} tone comments.
