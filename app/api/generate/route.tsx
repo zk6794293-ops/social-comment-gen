@@ -6,13 +6,11 @@ export async function POST(req: NextRequest) {
     const { prompt } = await req.json();
     const apiKey = process.env.GEMINI_API_KEY;
     
-    // 👇 یہ 2 لائن add کرو
     if (!apiKey) {
       return NextResponse.json({ error: "GEMINI_API_KEY missing" }, { status: 500 });
     }
     
-    const genAI = new GoogleGenerativeAI(apiKey); // اب error ختم
-    
+    const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     
     const result = await model.generateContent(prompt);
@@ -21,6 +19,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ text });
     
   } catch (e: any) {
+    console.log("FULL ERROR:", e);              // 👈 یہ لائن add کرو
+    console.log("ERROR MESSAGE:", e.message);   // 👈 یہ بھی add کرو
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
-} 
+}
