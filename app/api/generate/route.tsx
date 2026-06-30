@@ -1,33 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function POST(req: NextRequest) {
   try {
+    const { prompt } = await req.json();
     const apiKey = process.env.GEMINI_API_KEY;
     
-    if (!apiKey) {
-      return NextResponse.json({ error: "GEMINI_API_KEY missing" }, { status: 500 });
-    }
-
-    // 👇 REST API سے Google کے سارے available models نکالیں گے
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-    const data = await res.json();
+    const genAI = new GoogleGenerativeAI(apiKey);
     
-    if (!res.ok) {
-      console.log("Google API Error:", data);
-      return NextResponse.json({ error: data.error?.message || "API failed" }, { status: 500 });
-    }
+    // 👇 بس یہ model name لگاؤ - 'models/' ہٹا دیا
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     
-    const modelNames = data.models?.map((m: any) => m.name) || [];
-    console.log("AVAILABLE MODELS:", modelNames);
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
     
-    return NextResponse.json({ 
-      success: true,
-      msg: "Vercel Logs میں AVAILABLE MODELS دیکھو",
-      models: modelNames 
-    });
+    return NextResponse.json({ text });
     
   } catch (e: any) {
-    console.log("Error:", e.message);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
