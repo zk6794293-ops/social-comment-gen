@@ -6,9 +6,13 @@ export async function POST(req: NextRequest) {
     const { prompt } = await req.json();
     const apiKey = process.env.GEMINI_API_KEY;
     
-    const genAI = new GoogleGenerativeAI(apiKey);
+    // 👇 یہ 2 لائن add کرو
+    if (!apiKey) {
+      return NextResponse.json({ error: "GEMINI_API_KEY missing" }, { status: 500 });
+    }
     
-    // 👇 بس یہ model name لگاؤ - 'models/' ہٹا دیا
+    const genAI = new GoogleGenerativeAI(apiKey); // اب error ختم
+    
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     
     const result = await model.generateContent(prompt);
