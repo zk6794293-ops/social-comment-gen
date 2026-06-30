@@ -36,4 +36,4 @@ Write 3 short, natural, human-like comments. 1-2 lines each. Match language. No 
   } catch (error) {
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
-}
+} 
