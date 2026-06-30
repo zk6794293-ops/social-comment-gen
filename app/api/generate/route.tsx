@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       'Write 3 short, natural, human-like comments as if a real person is commenting.\n' +
       '1-2 lines each. Match the post language. No hashtags, no quotes. Separate each comment with ||';
 
-    // فری ماڈلز کی لسٹ - اوپر والا پہلے ٹرائی ہو گا
+    // فری ماڈلز پہلے، paid والا last پر
     const models = [
       "gemini-1.5-flash-latest",
       "gemini-1.0-pro", 
@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
     let lastError = "";
     for (const modelName of models) {
       try {
+        console.log("Trying model: " + modelName); // ← debug log لگا دیا
         const model = genAI.getGenerativeModel({ model: modelName });
         const result = await model.generateContent(prompt);
         const text = result.response.text();
@@ -40,11 +41,17 @@ export async function POST(req: NextRequest) {
         console.log("Success with model: " + modelName);
         return NextResponse.json({ comments, model: modelName });
       } catch (e: any) {
-        lastError = e.message;
-        console.log("Model " + modelName + " failed: " + e.message);
-        if (!e.message.includes("429") && !e.message.includes("404")) {
-          break;
+        lastError = e.message || "Unknown error";
+        console.log("Model " + modelName + " failed: " + lastError);
+        
+        // اگر quota یا 404 error ہے تو next ماڈل ٹرائی کرو
+        const msg = lastError.toLowerCase();
+        const isQuotaError = msg.includes("429") || msg.includes("quota") || msg.includes("billing");
+        
+        if (!isQuotaError) {
+          break; // کوئی اور error ہے تو رک جاؤ
         }
+        // quota error ہے تو loop چلنے دو → next ماڈل
       }
     }
 
