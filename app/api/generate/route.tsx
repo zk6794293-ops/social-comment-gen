@@ -15,9 +15,43 @@ export async function POST(req: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const prompt = `Post: "${post}"
-User wants ${tone} tone comments.
+    
+    const prompt = 'Post: "' + post + '"\n' +
+      'User wants ' + tone + ' tone comments.\n\n' +
+      'Task: Read the post, understand context + language.\n' +
+      'Write 3 short, natural, human-like comments as if a real person is commenting.\n' +
+      '1-2 lines each. Match the post language. No hashtags, no quotes. Separate each comment with ||';
 
-Task: Read the post, understand context + language.
-Write 3 short, natural, human-like comments as if a real person is commenting.
-1-2 lines each. Match the post language. No hashtags, no quotes. Separate each comment with ||`;
+    // فری ماڈلز کی لسٹ - اوپر والا پہلے ٹرائی ہو گا
+    const models = [
+      "gemini-1.5-flash-latest",
+      "gemini-1.0-pro", 
+      "gemini-2.0-flash"
+    ];
+
+    let lastError = "";
+    for (const modelName of models) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent(prompt);
+        const text = result.response.text();
+        const comments = text.split("||").map(c => c.trim()).filter(Boolean).slice(0, 3);
+        
+        console.log("Success with model: " + modelName);
+        return NextResponse.json({ comments, model: modelName });
+      } catch (e: any) {
+        lastError = e.message;
+        console.log("Model " + modelName + " failed: " + e.message);
+        if (!e.message.includes("429") && !e.message.includes("404")) {
+          break;
+        }
+      }
+    }
+
+    return NextResponse.json({ error: "All models failed. Last error: " + lastError }, { status: 500 });
+  } catch (error) {
+    console.error('Gemini Error:', error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
+  }
+}
