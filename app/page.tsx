@@ -18,7 +18,7 @@ export default function Home() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ post, tone }),
+        body: JSON.stringify({ prompt: post, tone }),  // ← یہاں ٹھیک کر دیا
       });
 
       const data = await res.json();
