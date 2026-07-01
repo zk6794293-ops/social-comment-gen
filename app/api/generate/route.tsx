@@ -14,26 +14,41 @@ export async function POST(req: NextRequest) {
       throw new Error("GROQ_KEY missing in Vercel Env Vars");
     }
 
-    const { prompt } = await req.json();
+    const { prompt, tone } = await req.json();
     console.log("Prompt received:", prompt);
+    console.log("Tone received:", tone);
 
-    // 2. Groq API call
+    // 2. Groq API call - model updated
     const groq = new Groq({ apiKey });
 
     console.log("Calling Groq API...");
     const result = await groq.chat.completions.create({
-      model: "llama3-8b-8192",
-      messages: [{ role: "user", content: prompt }],
+      model: "llama-3.1-8b-instant", // ← پرانا model ٹھیک کر دیا
+      messages: [
+        {
+          role: "user",
+          content: `Generate 3 ${tone} comments for this social media post. Each comment on new line, no numbering, no quotes:\n\n${prompt}`
+        }
+      ],
       temperature: 0.7,
       max_tokens: 500
     });
 
-    // 3. Response
-    const text = result.choices[0]?.message?.content;
+    // 3. Response - comments array return کرو
+    const text = result.choices[0]?.message?.content || "";
     console.log("Final text:", text);
+
+    // Text کو 3 comments میں split کرو
+    const comments = text
+     .split('\n')
+     .map(c => c.trim().replace(/^[-•*]\s*/, '').replace(/^["']|["']$/g, ''))
+     .filter(c => c.length > 5)
+     .slice(0, 3);
+
+    console.log("Comments array:", comments);
     console.log("=== DEBUG END ===");
 
-    return NextResponse.json({ text });
+    return NextResponse.json({ comments }); // ← {text} کی جگہ {comments}
 
   } catch (error: any) {
     console.error("=== ERROR CAUGHT ===");
@@ -44,6 +59,9 @@ export async function POST(req: NextRequest) {
     }
     if (error.message?.includes("429")) {
       return NextResponse.json({ error: "Rate limit - تھوڑی دیر بعد ٹرائی کرو" }, { status: 429 });
+    }
+    if (error.message?.includes("decommissioned")) {
+      return NextResponse.json({ error: "Model deprecated - code updated" }, { status: 500 });
     }
 
     return NextResponse.json({ error: error.message }, { status: 500 });
