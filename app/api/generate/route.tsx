@@ -1,39 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 
 export async function POST(req: NextRequest) {
   try {
-    const { post, tone } = await req.json();
-    
-    if (!post) {
-      return NextResponse.json({ error: "Post missing" }, { status: 400 });
-    }
+    console.log("=== DEBUG START ===");
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    // 1. Key check
+    const apiKey = process.env.GROQ_KEY;
+    console.log("GROQ KEY EXISTS:",!!apiKey);
+    console.log("GROQ KEY FIRST 8:", apiKey? apiKey.slice(0, 8) + "..." : "MISSING");
+
     if (!apiKey) {
-      return NextResponse.json({ error: "GEMINI_API_KEY not set in Vercel" }, { status: 500 });
+      throw new Error("GROQ_KEY missing in Vercel Env Vars");
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    
-    // فری کوٹا: 60 req/min - نئی API کا اسٹیبل نام
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const { prompt } = await req.json();
+    console.log("Prompt received:", prompt);
 
-    const prompt = `Post: "${post}"
-User wants ${tone} tone comments.
+    // 2. Groq API call
+    const groq = new Groq({ apiKey });
 
-Task: Read the post, understand context + language.
-Write 3 short, natural, human-like comments as if a real person is commenting.
-1-2 lines each. Match the post language. No hashtags, no quotes. Separate each comment with ||`;
+    console.log("Calling Groq API...");
+    const result = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+      max_tokens: 500
+    });
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    const comments = text.split("||").map(c => c.trim()).filter(Boolean).slice(0, 3);
+    // 3. Response
+    const text = result.choices[0]?.message?.content;
+    console.log("Final text:", text);
+    console.log("=== DEBUG END ===");
 
-    return NextResponse.json({ comments });
-  } catch (error) {
-    console.error('Gemini Error:', error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    return NextResponse.json({ text });
+
+  } catch (error: any) {
+    console.error("=== ERROR CAUGHT ===");
+    console.error("Error:", error.message);
+
+    if (error.message?.includes("401")) {
+      return NextResponse.json({ error: "Key invalid - groq.com پر نئی key بناؤ" }, { status: 401 });
+    }
+    if (error.message?.includes("429")) {
+      return NextResponse.json({ error: "Rate limit - تھوڑی دیر بعد ٹرائی کرو" }, { status: 429 });
+    }
+
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
